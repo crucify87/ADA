@@ -1,0 +1,202 @@
+---
+name: CyberDeck Hub
+colors:
+  surface: '#0f131d'
+  surface-dim: '#0f131d'
+  surface-bright: '#353944'
+  surface-container-lowest: '#0a0e18'
+  surface-container-low: '#171b26'
+  surface-container: '#1c1f2a'
+  surface-container-high: '#262a35'
+  surface-container-highest: '#313540'
+  on-surface: '#dfe2f1'
+  on-surface-variant: '#bbc9cf'
+  inverse-surface: '#dfe2f1'
+  inverse-on-surface: '#2c303b'
+  outline: '#859399'
+  outline-variant: '#3c494e'
+  surface-tint: '#47d6ff'
+  primary: '#a5e7ff'
+  on-primary: '#003543'
+  primary-container: '#00d2ff'
+  on-primary-container: '#00566a'
+  inverse-primary: '#00677f'
+  secondary: '#b4c5ff'
+  on-secondary: '#002a78'
+  secondary-container: '#0053db'
+  on-secondary-container: '#cdd7ff'
+  tertiary: '#edd4ff'
+  on-tertiary: '#490080'
+  tertiary-container: '#dab1ff'
+  on-tertiary-container: '#730dc2'
+  error: '#ffb4ab'
+  on-error: '#690005'
+  error-container: '#93000a'
+  on-error-container: '#ffdad6'
+  primary-fixed: '#b6ebff'
+  primary-fixed-dim: '#47d6ff'
+  on-primary-fixed: '#001f28'
+  on-primary-fixed-variant: '#004e60'
+  secondary-fixed: '#dbe1ff'
+  secondary-fixed-dim: '#b4c5ff'
+  on-secondary-fixed: '#00174b'
+  on-secondary-fixed-variant: '#003ea8'
+  tertiary-fixed: '#f0dbff'
+  tertiary-fixed-dim: '#ddb7ff'
+  on-tertiary-fixed: '#2c0051'
+  on-tertiary-fixed-variant: '#6900b3'
+  background: '#0f131d'
+  on-background: '#dfe2f1'
+  surface-variant: '#313540'
+typography:
+  headline-xl:
+    fontFamily: Space Grotesk
+    fontSize: 36px
+    fontWeight: '700'
+    lineHeight: 44px
+  headline-xl-mobile:
+    fontFamily: Space Grotesk
+    fontSize: 28px
+    fontWeight: '700'
+    lineHeight: 34px
+  headline-lg:
+    fontFamily: Space Grotesk
+    fontSize: 26px
+    fontWeight: '700'
+    lineHeight: 32px
+  headline-md:
+    fontFamily: Space Grotesk
+    fontSize: 20px
+    fontWeight: '600'
+    lineHeight: 26px
+  headline-sm:
+    fontFamily: Space Grotesk
+    fontSize: 16px
+    fontWeight: '600'
+    lineHeight: 22px
+  body-lg:
+    fontFamily: Sora
+    fontSize: 16px
+    fontWeight: '400'
+    lineHeight: 24px
+  body-md:
+    fontFamily: Sora
+    fontSize: 14px
+    fontWeight: '400'
+    lineHeight: 20px
+  body-sm:
+    fontFamily: Sora
+    fontSize: 12px
+    fontWeight: '400'
+    lineHeight: 16px
+  label-lg:
+    fontFamily: Space Grotesk
+    fontSize: 13px
+    fontWeight: '600'
+    lineHeight: 18px
+  label-md:
+    fontFamily: Space Grotesk
+    fontSize: 11px
+    fontWeight: '700'
+    lineHeight: 14px
+  label-sm:
+    fontFamily: Space Grotesk
+    fontSize: 10px
+    fontWeight: '700'
+    lineHeight: 12px
+rounded:
+  sm: 0.25rem
+  DEFAULT: 0.5rem
+  md: 0.75rem
+  lg: 1rem
+  xl: 1.5rem
+  full: 9999px
+spacing:
+  gutter: 1rem
+  gutter-desktop: 1.5rem
+  margin: 1rem
+  margin-desktop: 2.5rem
+  space-xs: 0.25rem
+  space-sm: 0.5rem
+  space-md: 1rem
+  space-lg: 1.5rem
+  space-xl: 2.5rem
+---
+
+## Brand & Style
+
+This design system channels the focused, high-performance atmosphere of premium PC gaming hubs like Steam, reimagined with clean digital craftsmanship. It is tailored for digital creators, gamers, and power users who view their toolsets, creative applications, and games as an integrated command center.
+
+The personality balances utilitarian speed with electric immersion: deep space tones, atmospheric luminescence, sharp data density, and razor-sharp typographic legibility. Rather than generic corporate minimalism, the aesthetic leverages a modern dark cyberpunk architecture—pairing deep charcoal-slate substrates with precise neon cyan highlights, controlled translucent glass overlays, and tactile glowing actions. Every surface exudes speed, reliability, and readiness.
+
+## Colors
+
+The palette establishes high contrast against deep, atmospheric slate tones:
+- **Primary (`#00D2FF`):** Hyper-focused neon cyan used for primary play/launch actions, active tab underlines, focus rings, and high-priority state indicators (e.g., "RUNNING" badges).
+- **Secondary (`#2563EB`):** Electric cobalt blue supporting interactive navigation, secondary action glows, link states, and interactive shelf backgrounds.
+- **Tertiary (`#A855F7`):** Violet nebula accent reserved for milestone trophies, rare achievements, notifications, and special event highlights.
+- **Neutral Base (`#0B0F19`):** Abyss charcoal slate delivering an authentic gaming-launcher canvas with zero harsh pure-black eye strain. 
+- **Surface Elevation Hierarchy:**
+  - Base Background: `#0B0F19`
+  - Card/Container Surface: `#131B2E`
+  - Elevated/Interactive Card: `#1E293B`
+  - Border Lines / Ghost Outlines: `#2A3854` (30% to 50% opacity)
+- **Status Accents:** Emerald Green (`#10B981`) for online presence, Amber Glow (`#F59E0B`) for updates and alerts, and Vivid Coral (`#EF4444`) for critical errors.
+
+## Typography
+
+The type system blends technical precision with modern gaming flair:
+- **Headlines & Display:** Set in **Space Grotesk**, bringing geometric sci-fi strength, wide apertures, and tech-forward momentum to application titles, module headers, and launch stats.
+- **Body & Metadata:** Set in **Sora**, offering balanced humanist curves, robust x-height, and superior legibility across dense library lists and dark canvas surfaces.
+- **Labels, Badges & Microcopy:** Rendered with uppercase **Space Grotesk** at tightened tracking (`+0.05em` to `+0.08em`) to mimic telemetry displays and tactical gaming interfaces.
+
+## Layout & Spacing
+
+The layout uses a responsive fluid modular grid tuned for dense visual discovery:
+- **Mobile (< 768px):** 4-column layout with 16px (`1rem`) outer margins and gutters. App cards sit in a 2-column grid or single-row horizontal snap carousels for spotlight items and recent stats.
+- **Tablet (768px - 1024px):** 8-column layout with 24px margins, allowing split panes (e.g., active queue on the left, spotlight store shelves on the right).
+- **Desktop (> 1024px):** 12-column fixed-max layout (max-width `1440px`), 40px (`2.5rem`) outer canvas margins, and 24px gutters. Provides Steam-style hero carousels with adjacent live thumbnails and wide multi-card horizontal shelves.
+- **Component Padding Scale:** Controlled strictly via 4px baseline multiples: `space-xs` (4px) for inline pill paddings, `space-sm` (8px) for badge and chip insets, `space-md` (16px) for card body padding, `space-lg` (24px) for section headers, and `space-xl` (40px) for layout row separation.
+
+## Elevation & Depth
+
+Visual hierarchy is maintained through subtle luminous layering and dark depth tiers rather than heavy drop shadows:
+- **Level 0 (Canvas Base):** Deepest slate substrate (`#0B0F19`) providing infinite background contrast.
+- **Level 1 (Card & Module Shells):** Elevated surface `#131B2E` bordered by a 1px crisp outline (`rgba(42, 56, 84, 0.6)`).
+- **Level 2 (Hover & Active Surfaces):** `#1E293B` backed by a diffuse colored ambient glow: `0px 8px 24px rgba(0, 210, 255, 0.12)`.
+- **Level 3 (Spotlight & Modals):** Translucent backdrop blur (`backdrop-filter: blur(16px); background: rgba(19, 27, 46, 0.85);`) with electric cyan rim highlight `1px solid rgba(0, 210, 255, 0.3)`.
+- **Neon Emission:** High-priority action elements (e.g., "PLAY" / "INSTALL" buttons) project an active neon glow (`0px 0px 16px rgba(0, 210, 255, 0.45)`).
+
+## Shapes
+
+The interface balances ergonomic softness with tech sharpness:
+- **Base Corner Radius (0.5rem / 8px):** Standard for buttons, tags, chips, input fields, and category filters.
+- **Large Radius (1rem / 16px):** App media cards, spotlight carousels, stat preview panels, and persistent navigation bars.
+- **Full Pill Radius (9999px):** Status badges ("RUNNING", "UPDATE AVAILABLE"), user presence indicators, and micro numeric badges.
+- **Borders:** Crisp, 1px structural framing across all card perimeters to retain mechanical precision against dark backgrounds.
+
+## Components
+
+### Buttons
+- **Primary Play / Action:** Vivid neon cyan background (`#00D2FF`), deep navy bold label (`#07101E`), rounded to `0.5rem`. Emits an ambient cyan glow on hover, scaling smoothly by 1.02.
+- **Secondary / Utility (Update, Install, Share):** Transparent background with `#2A3854` border, cyan text or ghost icon, shifting to `#1E293B` on hover.
+- **Tab Bar / Segmented Switcher:** Clean flat text with an illuminated bottom line marker (`#00D2FF`, 3px high, soft horizontal edge blur).
+
+### Chips & Filter Tags
+- **Category Chips:** Dark capsule container (`#131B2E`) with low-contrast slate border. On active selection: solid cyan text with a faint cyan background tint (`rgba(0, 210, 255, 0.15)`) and a glowing rim.
+
+### Application Cards
+- **Library Cards:** Aspect ratio 1:1 or 4:5 image poster preview topped with high-contrast text, nested status tags ("RUNNING", "INSTALLED", "UPDATE"), and an integrated quick-launch action button.
+- **Hover State:** Elevates with a 1px border shift to neon cyan and an image zoom transition of 1.04.
+
+### Status Badges & Telemetry
+- **Micro Badges:** Uppercase 10px Space Grotesk text enclosed in rounded pill containers with a 1px border.
+- **Active State ("RUNNING"):** Cyan border, cyan text, soft cyan glow.
+- **Notification State ("UPDATE AVAILABLE"):** Amber yellow border and text.
+
+### Stats & Progress Bars
+- **Progress Trackers:** 6px track height, dark slate fill (`#1E293B`), filled with a glowing horizontal gradient running from cyan (`#00D2FF`) to purple nebula (`#A855F7`).
+
+### Navigation & Shelves
+- **Horizontal Scroll Shelves:** Edge-to-edge momentum scroll with directional chevron controls that reveal themselves on hover.
+- **Bottom / Top Navigation:** Translucent slate floating dock, frosted glass treatment with glowing icon active states.

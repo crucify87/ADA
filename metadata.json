@@ -1,0 +1,7 @@
+{
+  "name": "CyberDeck Hub",
+  "description": "High-performance gaming and application command center for desktop and mobile with tactical telemetry, library management, and quick launch controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

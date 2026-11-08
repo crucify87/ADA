@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node server.mjs", "start": "node server.mjs", "test": "node --test tests/bridge.test.mjs",
+    "dev": "node server.mjs", "start": "node server.mjs", "test": "node --test tests/server.test.mjs",
     "build": "vite build && node scripts/prepare-runtime.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",

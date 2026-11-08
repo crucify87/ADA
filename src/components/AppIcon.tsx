@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppWindow } from 'lucide-react';
 
-function imageSources(url: string, imageUrl?: string) {
+function imageSources(url: string, imageUrl?: string, discovered: string[] = []) {
   const sources: string[] = [];
   if (imageUrl) {
     try { const image = new URL(imageUrl); if (['https:', 'http:'].includes(image.protocol)) sources.push(image.href); } catch {}
   }
+  sources.push(...discovered);
   try {
     const app = new URL(url);
     if (['https:', 'http:'].includes(app.protocol)) sources.push(`${app.origin}/apple-touch-icon.png`, `${app.origin}/favicon.ico`);
@@ -21,6 +22,19 @@ function IconImage({ sources, name }: { sources: string[]; name: string }) {
 }
 
 export default function AppIcon({ url, imageUrl, name }: { url: string; imageUrl?: string; name: string }) {
-  const sources = imageSources(url, imageUrl);
+  const [discovered, setDiscovered] = useState<{ url: string; images: string[] }>({ url: '', images: [] });
+  useEffect(() => {
+    if (!url) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      fetch(`/api/app-image?url=${encodeURIComponent(url)}`, { signal: controller.signal })
+        .then(response => response.ok ? response.json() : { images: [] })
+        .then(data => {
+          if (!controller.signal.aborted) setDiscovered({ url, images: Array.isArray(data.images) ? data.images.filter((value: unknown) => typeof value === 'string' && /^https?:\/\//i.test(value)) : [] });
+        }).catch(() => {});
+    }, 300);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [url]);
+  const sources = imageSources(url, imageUrl, discovered.url === url ? discovered.images : []);
   return <IconImage key={JSON.stringify(sources)} sources={sources} name={name}/>;
 }

@@ -1,543 +1,70 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Gamepad2, 
-  Sparkles, 
-  Filter, 
-  ArrowUpDown, 
-  Flame, 
-  Check, 
-  Layers, 
-  Clock, 
-  SlidersHorizontal,
-  FolderSync
-} from 'lucide-react';
-import { GameItem, TelemetryState, NotificationItem, FriendItem, HubSettings } from './types';
-import { INITIAL_GAMES, INITIAL_FRIENDS, INITIAL_NOTIFICATIONS } from './data/mockGames';
-import { TopBar } from './components/TopBar';
-import { Sidebar } from './components/Sidebar';
-import { BottomBar } from './components/BottomBar';
-import { SpotlightHero } from './components/SpotlightHero';
-import { GameCard } from './components/GameCard';
-import { GameDetailModal } from './components/GameDetailModal';
-import { GameRunningOverlay } from './components/GameRunningOverlay';
-import { DownloadsView } from './components/DownloadsView';
-import { TelemetryDrawer } from './components/TelemetryDrawer';
-import { FriendsView } from './components/FriendsView';
-import { StoreView } from './components/StoreView';
-import { SettingsView } from './components/SettingsView';
+import React, { useCallback, useEffect, useState } from 'react';
+import { AppWindow, Boxes, Code2, Globe, Star, Plus, Pencil, Search, X, ExternalLink, Archive, CheckSquare } from 'lucide-react';
 
+import CodexPanel from './components/CodexPanel';
+
+type Entry = { id: string; name: string; description: string; url: string; repository: string; author: string; origin: 'mine' | 'external'; category: string; status: 'active' | 'archived'; favorite: boolean; updatedAt: string; lastCodexJob?: string };
+const KEY = 'ada-app-library-v1';
+const fresh = (): Entry => ({ id: crypto.randomUUID(), name: '', description: '', url: '', repository: '', author: '', origin: 'mine', category: '도구', status: 'active', favorite: false, updatedAt: new Date().toISOString() });
+const categories = ['도구', '생산성', '콘텐츠', '개발', '기타'];
+const input = 'w-full rounded-xl border border-slate-700 bg-[#0B0F19] px-3 py-2.5 text-sm focus:outline-none focus:border-cyan-400';
+function safeUrl(value: string) { try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol); } catch { return false; } }
+function readEntries(): Entry[] { try { const value = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(value) ? value.filter(e => e && typeof e.id === 'string' && typeof e.name === 'string' && typeof e.description === 'string' && ['mine', 'external'].includes(e.origin) && ['active', 'archived'].includes(e.status)) : []; } catch { return []; } }
 export default function App() {
-  // --- Core State ---
-  const [games, setGames] = useState<GameItem[]>(INITIAL_GAMES);
-  const [friends, setFriends] = useState<FriendItem[]>(INITIAL_FRIENDS);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
-
-  const [telemetry, setTelemetry] = useState<TelemetryState>({
-    fps: 60,
-    fpsLimit: 60,
-    tdpWatt: 15,
-    batteryPct: 84,
-    isCharging: true,
-    fanRpm: 3200,
-    gpuTemp: 64,
-    cpuUsage: 42,
-    ramUsageGb: 9.8,
-    wifiLatencyMs: 18,
-    fsrSharpness: 3,
-    overlayLevel: 2
-  });
-
-  const [settings, setSettings] = useState<HubSettings>({
-    language: 'ko',
-    autoUpdate: true,
-    cloudSaves: true,
-    hapticFeedback: true,
-    audioVolume: 75,
-    screenBrightness: 80,
-    performanceProfile: 'balanced',
-    deckGamepadLayout: 'standard'
-  });
-
-  // Navigation & View Mode
-  const [activeSection, setActiveSection] = useState<'library' | 'store' | 'downloads' | 'hardware' | 'friends' | 'settings'>('library');
-  const [viewMode, setViewMode] = useState<'desktop' | 'deck'>('desktop');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
-
-  // Filters & Search
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'installed' | 'action' | 'cyberpunk' | 'indie' | 'tools' | 'favorites'>('all');
-  const [sortBy, setSortBy] = useState<'recent' | 'playtime' | 'title' | 'score'>('recent');
-
-  // Modals & Overlays
-  const [selectedGameForModal, setSelectedGameForModal] = useState<GameItem | null>(null);
-  const [runningGameId, setRunningGameId] = useState<string>('cyberpunk-2077');
-  const [isGameOverlayOpen, setIsGameOverlayOpen] = useState<boolean>(false);
-  const [isTelemetryDrawerOpen, setIsTelemetryDrawerOpen] = useState<boolean>(false);
-  const [isFriendsDrawerOpen, setIsFriendsDrawerOpen] = useState<boolean>(false);
-  const [featuredGameId, setFeaturedGameId] = useState<string>('cyberpunk-2077');
-
-  const runningGame = useMemo(() => {
-    return games.find(g => g.id === runningGameId && g.status === 'RUNNING') || null;
-  }, [games, runningGameId]);
-
-  const featuredGame = useMemo(() => {
-    return games.find(g => g.id === featuredGameId) || games[0];
-  }, [games, featuredGameId]);
-
-  // --- Handlers ---
-  const handleLaunchGame = (gameId: string) => {
-    setGames(prev => prev.map(g => {
-      if (g.id === gameId) {
-        return { ...g, status: 'RUNNING', lastPlayed: '방금 전 (실행 중)' };
-      }
-      return g;
-    }));
-    setRunningGameId(gameId);
-    setIsGameOverlayOpen(true);
-  };
-
-  const handleStopGame = (gameId: string) => {
-    setGames(prev => prev.map(g => {
-      if (g.id === gameId) {
-        return { ...g, status: 'INSTALLED', lastPlayed: '방금 전' };
-      }
-      return g;
-    }));
-    if (runningGameId === gameId) {
-      setRunningGameId('');
-    }
-    setIsGameOverlayOpen(false);
-  };
-
-  const handleInstallOrUpdate = (gameId: string) => {
-    const target = games.find(g => g.id === gameId);
-    if (!target) return;
-
-    // Start animated download simulation
-    let progress = 10;
-    setGames(prev => prev.map(g => {
-      if (g.id === gameId) {
-        return { 
-          ...g, 
-          status: 'NOT_INSTALLED', 
-          downloadProgress: 10,
-          downloadSpeed: '82.4 MB/s' 
-        };
-      }
-      return g;
-    }));
-
-    const interval = setInterval(() => {
-      progress += 20;
-      if (progress >= 100) {
-        clearInterval(interval);
-        setGames(prev => prev.map(g => {
-          if (g.id === gameId) {
-            return {
-              ...g,
-              status: 'INSTALLED',
-              downloadProgress: undefined,
-              downloadSpeed: undefined,
-              lastPlayed: '최근 설치됨'
-            };
-          }
-          return g;
-        }));
-
-        setNotifications(prev => [
-          {
-            id: `n-${Date.now()}`,
-            title: `${target.title} 설치 완료`,
-            detail: '게임 파일 무결성 확인 및 셰이더 프리캐시 완료. 지금 바로 플레이할 수 있습니다.',
-            time: '방금 전',
-            type: 'download',
-            unread: true
-          },
-          ...prev
-        ]);
-      } else {
-        setGames(prev => prev.map(g => {
-          if (g.id === gameId) {
-            return { ...g, downloadProgress: progress };
-          }
-          return g;
-        }));
-      }
-    }, 400);
-  };
-
-  const handleCancelDownload = (gameId: string) => {
-    setGames(prev => prev.map(g => {
-      if (g.id === gameId) {
-        return {
-          ...g,
-          status: 'NOT_INSTALLED',
-          downloadProgress: 0,
-          downloadSpeed: undefined
-        };
-      }
-      return g;
-    }));
-  };
-
-  const handleToggleFavorite = (gameId: string) => {
-    setGames(prev => prev.map(g => {
-      if (g.id === gameId) {
-        return { ...g, isFavorite: !g.isFavorite };
-      }
-      return g;
-    }));
-  };
-
-  const handleToggleFpsLimit = () => {
-    const limits = [30, 40, 60, 0];
-    const currentIndex = limits.indexOf(telemetry.fpsLimit);
-    const nextLimit = limits[(currentIndex + 1) % limits.length];
-    setTelemetry(prev => ({ ...prev, fpsLimit: nextLimit }));
-  };
-
-  const handleAddToLibrary = (storeItem: any) => {
-    const newGame: GameItem = {
-      id: `game-${storeItem.id}`,
-      title: storeItem.title,
-      tagline: storeItem.tagline,
-      genre: storeItem.genre as any,
-      status: 'NOT_INSTALLED',
-      installSize: '42.5 GB',
-      playtimeHours: 0,
-      lastPlayed: '플레이 기록 없음',
-      metascore: storeItem.rating,
-      achievements: { unlocked: 0, total: 35 },
-      tags: storeItem.tags,
-      description: storeItem.tagline,
-      developer: 'CyberDeck Store Partner',
-      releaseDate: '2024.11',
-      isFavorite: false,
-      themeColor: storeItem.color,
-      accentGradient: 'from-cyan-600/20 to-[#0B0F19]',
-      iconName: 'Gamepad2',
-      cloudSyncStatus: 'synced',
-      systemReq: {
-        gpu: 'Deck RDNA 2 / GTX 1660',
-        cpu: 'Quad Core x86',
-        storage: '45 GB SSD'
-      }
-    };
-
-    setGames(prev => [newGame, ...prev]);
-    setActiveSection('library');
-  };
-
-  // --- Filtering & Sorting ---
-  const filteredGames = useMemo(() => {
-    return games.filter(game => {
-      // Search matching
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesTitle = game.title.toLowerCase().includes(q);
-        const matchesTag = game.tags.some(t => t.toLowerCase().includes(q));
-        const matchesDev = game.developer.toLowerCase().includes(q);
-        if (!matchesTitle && !matchesTag && !matchesDev) return false;
-      }
-
-      // Category matching
-      if (categoryFilter === 'installed') {
-        return game.status === 'INSTALLED' || game.status === 'RUNNING';
-      }
-      if (categoryFilter === 'action') {
-        return game.genre === 'Action RPG' || game.genre === 'Tactical';
-      }
-      if (categoryFilter === 'cyberpunk') {
-        return game.genre === 'Cyberpunk';
-      }
-      if (categoryFilter === 'indie') {
-        return game.genre === 'Indie';
-      }
-      if (categoryFilter === 'tools') {
-        return game.genre === 'Tools';
-      }
-      if (categoryFilter === 'favorites') {
-        return game.isFavorite;
-      }
-      return true;
-    }).sort((a, b) => {
-      if (sortBy === 'recent') {
-        if (a.status === 'RUNNING') return -1;
-        if (b.status === 'RUNNING') return 1;
-        return b.playtimeHours - a.playtimeHours;
-      }
-      if (sortBy === 'playtime') {
-        return b.playtimeHours - a.playtimeHours;
-      }
-      if (sortBy === 'title') {
-        return a.title.localeCompare(b.title);
-      }
-      if (sortBy === 'score') {
-        return b.metascore - a.metascore;
-      }
-      return 0;
-    });
-  }, [games, searchQuery, categoryFilter, sortBy]);
-
-  const installedCount = games.filter(g => g.status === 'INSTALLED' || g.status === 'RUNNING').length;
-  const activeDownloadsCount = games.filter(g => g.downloadProgress && g.downloadProgress > 0).length;
-  const onlineFriendsCount = friends.filter(f => f.status === 'online' || f.status === 'in-game').length;
-
-  return (
-    <div className={`min-h-screen bg-[#0B0F19] text-[#dfe2f1] flex flex-col ${viewMode === 'deck' ? 'deck-handheld-view' : ''}`}>
-      
-      {/* 1. TOP BAR */}
-      <TopBar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        viewMode={viewMode}
-        onToggleViewMode={() => setViewMode(prev => prev === 'desktop' ? 'deck' : 'desktop')}
-        telemetry={telemetry}
-        notifications={notifications}
-        onDismissNotification={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
-        onClearAllNotifications={() => setNotifications([])}
-        onOpenTelemetry={() => setIsTelemetryDrawerOpen(true)}
-        onOpenFriends={() => setActiveSection('friends')}
-        onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
-        onlineFriendsCount={onlineFriendsCount}
-      />
-
-      {/* 2. BODY LAYOUT (Sidebar + Main Content Area) */}
-      <div className="flex-1 flex w-full max-w-[1700px] mx-auto">
-        
-        {/* SIDEBAR (Responsive Navigation Rail) */}
-        <Sidebar
-          activeSection={activeSection}
-          onSelectSection={(sec) => setActiveSection(sec)}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
-          isMobileOpen={isMobileMenuOpen}
-          onCloseMobile={() => setIsMobileMenuOpen(false)}
-          installedCount={installedCount}
-          activeDownloadsCount={activeDownloadsCount}
-          onlineFriendsCount={onlineFriendsCount}
-        />
-
-        {/* MAIN VIEWPORT CONTAINER */}
-        <main className="flex-1 p-3 sm:p-6 lg:p-8 min-w-0 pb-24 md:pb-16 overflow-x-hidden">
-          
-          {/* SECTION: LIBRARY (Default Game Library View) */}
-          {activeSection === 'library' && (
-            <div className="space-y-6">
-              
-              {/* Spotlight Hero Banner (Featured Game Showcase) */}
-              <SpotlightHero
-                featuredGame={featuredGame}
-                allFeatured={games.slice(0, 4)}
-                onSelectFeatured={(g) => setFeaturedGameId(g.id)}
-                onLaunch={handleLaunchGame}
-                onOpenDetails={(g) => setSelectedGameForModal(g)}
-              />
-
-              {/* Filter Tabs & Sort Controls */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#131B2E] border border-[#2A3854] rounded-2xl p-3 sm:p-4 shadow-md">
-                
-                {/* Category Chips */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
-                  {[
-                    { id: 'all', label: '전체 타이틀' },
-                    { id: 'installed', label: '설치됨' },
-                    { id: 'favorites', label: '즐겨찾기' },
-                    { id: 'action', label: '액션 RPG' },
-                    { id: 'cyberpunk', label: '사이버펑크' },
-                    { id: 'indie', label: '인디' },
-                    { id: 'tools', label: '도구 & 유틸' }
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setCategoryFilter(tab.id as any)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-headline font-semibold transition-all shrink-0 min-h-[36px] ${
-                        categoryFilter === tab.id
-                          ? 'bg-[#00D2FF] text-[#07101E] shadow-[0_0_12px_rgba(0,210,255,0.3)]'
-                          : 'bg-[#1E293B] text-slate-300 hover:text-white border border-[#2A3854]'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Sort By Dropdown */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-xs font-mono text-slate-400 hidden sm:inline">정렬:</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="bg-[#1E293B] border border-[#2A3854] text-xs font-mono text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#00D2FF]"
-                  >
-                    <option value="recent">최근 플레이 순</option>
-                    <option value="playtime">플레이 시간 많은 순</option>
-                    <option value="title">이름순 (A-Z)</option>
-                    <option value="score">메타크리틱 점수순</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Games Grid (Fluid Responsive Grid: 1 col on mobile, 2 on tablet, 3-4 on desktop) */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-headline font-bold text-base sm:text-lg text-white flex items-center gap-2">
-                    <span>게임 라이브러리</span>
-                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-[#00D2FF]/15 text-[#00D2FF]">
-                      {filteredGames.length}개
-                    </span>
-                  </h3>
-                </div>
-
-                {filteredGames.length === 0 ? (
-                  <div className="bg-[#131B2E] border border-[#2A3854] rounded-2xl p-10 text-center">
-                    <p className="text-slate-400 text-sm font-mono">
-                      검색 조건에 맞는 게임이 없습니다.
-                    </p>
-                    <button
-                      onClick={() => {
-                        setSearchQuery('');
-                        setCategoryFilter('all');
-                      }}
-                      className="mt-3 px-4 py-2 rounded-xl bg-[#00D2FF] text-[#07101E] font-headline font-bold text-xs"
-                    >
-                      필터 초기화
-                    </button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                    {filteredGames.map((game) => (
-                      <GameCard
-                        key={game.id}
-                        game={game}
-                        onSelect={(g) => setSelectedGameForModal(g)}
-                        onLaunch={handleLaunchGame}
-                        onInstallOrUpdate={handleInstallOrUpdate}
-                        onToggleFavorite={handleToggleFavorite}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-            </div>
-          )}
-
-          {/* SECTION: STORE */}
-          {activeSection === 'store' && (
-            <StoreView
-              onAddToLibrary={handleAddToLibrary}
-              ownedGameIds={games.map(g => g.id)}
-            />
-          )}
-
-          {/* SECTION: DOWNLOADS */}
-          {activeSection === 'downloads' && (
-            <DownloadsView
-              games={games}
-              onCancelDownload={handleCancelDownload}
-              onLaunchGame={handleLaunchGame}
-            />
-          )}
-
-          {/* SECTION: HARDWARE TELEMETRY */}
-          {activeSection === 'hardware' && (
-            <div className="space-y-6 max-w-4xl mx-auto">
-              <div className="bg-[#131B2E] border border-[#2A3854] rounded-2xl p-6 shadow-xl">
-                <h2 className="font-headline font-bold text-2xl text-white flex items-center gap-2.5">
-                  <SlidersHorizontal className="w-6 h-6 text-[#00D2FF]" />
-                  실시간 덱 APU & 성능 컨트롤
-                </h2>
-                <p className="text-xs text-slate-400 font-mono mt-1">
-                  배터리 수명 및 프레임 레이트 밸런싱을 위한 하드웨어 직접 제어
-                </p>
-              </div>
-
-              {/* Quick Launch Drawer Button */}
-              <div className="bg-[#131B2E] border border-[#2A3854] rounded-2xl p-6 text-center space-y-4">
-                <p className="text-sm text-slate-300">
-                  인게임 오버레이 및 세부 전력 튜닝 패널을 호출하여 TDP와 FSR 선명도를 조정하십시오.
-                </p>
-                <button
-                  onClick={() => setIsTelemetryDrawerOpen(true)}
-                  className="px-6 py-3 rounded-xl bg-[#00D2FF] text-[#07101E] font-headline font-bold text-sm shadow-[0_0_20px_rgba(0,210,255,0.4)] hover:bg-[#a5e7ff] transition-all"
-                >
-                  하드웨어 오버레이 패널 열기
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* SECTION: FRIENDS & COMMUNITY */}
-          {activeSection === 'friends' && (
-            <FriendsView
-              friends={friends}
-              onJoinFriendGame={(gameTitle) => {
-                const target = games.find(g => g.title.toLowerCase().includes(gameTitle.toLowerCase()));
-                if (target) {
-                  handleLaunchGame(target.id);
-                } else {
-                  alert(`'${gameTitle}' 게임 세션에 참가 요청을 전송했습니다.`);
-                }
-              }}
-            />
-          )}
-
-          {/* SECTION: SETTINGS */}
-          {activeSection === 'settings' && (
-            <SettingsView
-              settings={settings}
-              onUpdateSettings={(updated) => setSettings(prev => ({ ...prev, ...updated }))}
-            />
-          )}
-
-        </main>
-      </div>
-
-      {/* 3. BOTTOM BAR (Desktop Dock + Mobile Bottom Navigation) */}
-      <BottomBar
-        activeSection={activeSection}
-        onSelectSection={(sec) => setActiveSection(sec)}
-        runningGame={runningGame}
-        onOpenRunningOverlay={() => setIsGameOverlayOpen(true)}
-        onStopGame={handleStopGame}
-        telemetry={telemetry}
-        onToggleFpsLimit={handleToggleFpsLimit}
-        onOpenTelemetry={() => setIsTelemetryDrawerOpen(true)}
-      />
-
-      {/* 4. MODALS & OVERLAYS */}
-      {/* Game Details Modal */}
-      <GameDetailModal
-        game={selectedGameForModal}
-        onClose={() => setSelectedGameForModal(null)}
-        onLaunch={handleLaunchGame}
-        onStop={handleStopGame}
-        onInstallOrUpdate={handleInstallOrUpdate}
-        onToggleFavorite={handleToggleFavorite}
-      />
-
-      {/* Full Simulated In-Game Running HUD Overlay */}
-      {isGameOverlayOpen && runningGame && (
-        <GameRunningOverlay
-          game={runningGame}
-          telemetry={telemetry}
-          onCloseOverlay={() => setIsGameOverlayOpen(false)}
-          onQuitGame={(id) => handleStopGame(id)}
-          onOpenTelemetryDrawer={() => setIsTelemetryDrawerOpen(true)}
-        />
-      )}
-
-      {/* Hardware Telemetry Drawer */}
-      <TelemetryDrawer
-        isOpen={isTelemetryDrawerOpen}
-        onClose={() => setIsTelemetryDrawerOpen(false)}
-        telemetry={telemetry}
-        onUpdateTelemetry={(updated) => setTelemetry(prev => ({ ...prev, ...updated }))}
-      />
-
+  const [entries, setEntries] = useState<Entry[]>(readEntries);
+  const onApplied = useCallback((appId: string, jobId: string) => {
+    setEntries(prev => prev.map(entry => entry.id === appId && entry.lastCodexJob !== jobId ? { ...entry, lastCodexJob: jobId, updatedAt: new Date().toISOString() } : entry));
+  }, []);
+  const [section, setSection] = useState('all');
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState('전체');
+  const [selected, setSelected] = useState<string[]>([]);
+  const [editor, setEditor] = useState<Entry | null>(null);
+  const [bulk, setBulk] = useState(false);
+  const [bulkCategory, setBulkCategory] = useState('');
+  const [bulkOrigin, setBulkOrigin] = useState('');
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [message, setMessage] = useState('');
+  useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch { setMessage('저장 공간이 부족하거나 브라우저 저장이 제한되어 변경 내용을 보관하지 못했습니다.'); } }, [entries]);
+  const visible = entries.filter(e => (section === 'archived' ? e.status === 'archived' : e.status === 'active') && (section === 'mine' ? e.origin === 'mine' : section === 'external' ? e.origin === 'external' : section === 'favorites' ? e.favorite : true) && (category === '전체' || e.category === category) && `${e.name} ${e.description} ${e.author}`.toLowerCase().includes(query.toLowerCase())).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt));
+  const nav = [{ id: 'all', name: '전체 앱', icon: Boxes }, { id: 'mine', name: '직접 만든 앱', icon: Code2 }, { id: 'external', name: '외부 앱', icon: Globe }, { id: 'favorites', name: '즐겨찾기', icon: Star }, { id: 'archived', name: '보관된 앱', icon: Archive }];
+  function save(event: React.FormEvent) {
+    event.preventDefault(); if (!editor) return;
+    if (!editor.name.trim()) { setMessage('앱 이름을 입력해주세요.'); return; }
+    if ([editor.url, editor.repository].some(url => url && !safeUrl(url))) { setMessage('앱 주소와 소스 저장소에는 http 또는 https 주소를 입력해주세요.'); return; }
+    const entry = { ...editor, name: editor.name.trim(), updatedAt: new Date().toISOString() };
+    setEntries(prev => prev.some(e => e.id === entry.id) ? prev.map(e => e.id === entry.id ? entry : e) : [...prev, entry]);
+    setEditor(null); setMessage('앱 정보를 저장했습니다.');
+  }
+  function applyBulk(event: React.FormEvent) {
+    event.preventDefault();
+    setEntries(prev => prev.map(e => selected.includes(e.id) ? { ...e, ...(bulkCategory ? { category: bulkCategory } : {}), ...(bulkOrigin ? { origin: bulkOrigin as Entry['origin'] } : {}), ...(bulkStatus ? { status: bulkStatus as Entry['status'] } : {}), updatedAt: new Date().toISOString() } : e));
+    setBulk(false); setSelected([]); setMessage('선택한 앱 정보를 일괄 수정했습니다.');
+  }
+  return <div className="min-h-screen bg-[#0B0F19] text-slate-200">
+    <header className="border-b border-slate-800 flex items-center justify-between px-5 md:px-9 py-4 gap-4">
+      <a href="#" className="flex items-center gap-3"><img src="/ada-icon.jpg" alt="ADA" className="w-11 h-11 rounded-xl"/><div><strong className="block text-white tracking-widest">ADA HUB</strong><span className="text-xs text-slate-400">앱 등록 · 보관 · 관리</span></div></a>
+      <button onClick={() => { setEditor(fresh()); setMessage(''); }} className="flex items-center gap-2 rounded-xl bg-cyan-400 text-slate-950 px-4 py-2.5 font-semibold text-sm"><Plus size={18}/>앱 등록</button>
+    </header>
+    <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row">
+      <aside className="md:w-60 shrink-0 border-b md:border-b-0 md:border-r border-slate-800 p-4 md:min-h-[calc(100vh-78px)]">
+        <div className="mb-5 overflow-hidden rounded-2xl border border-cyan-400/20 bg-[#080d13]"><img src="/ada-icon.jpg" alt="ADA Hub 대표 이미지" width="1024" height="1024" className="block aspect-square w-full object-contain"/><div className="border-t border-cyan-400/10 px-4 py-3"><p className="font-bold tracking-[0.2em] text-white">ADA HUB</p><p className="mt-1 text-xs text-slate-400">나의 앱 관리 공간</p></div></div><p className="text-xs tracking-widest text-slate-500 mb-4 px-3">APP WORKSPACE</p><nav className="flex md:flex-col gap-2 overflow-x-auto">{nav.map(item => <button key={item.id} onClick={() => { setSection(item.id); setSelected([]); }} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm whitespace-nowrap ${section === item.id ? 'bg-cyan-400/10 text-cyan-300' : 'text-slate-400 hover:bg-slate-800'}`}><item.icon size={18}/>{item.name}</button>)}</nav>
+        <p className="hidden md:block text-xs text-slate-500 leading-6 p-3 mt-8">직접 만든 앱과 다른 제작자의 앱을 한곳에 보관하세요.<br/>등록 정보는 이 브라우저에 저장됩니다.</p>
+      </aside>
+      <main className="flex-1 min-w-0 p-5 md:p-9 space-y-7">
+        <section className="rounded-3xl border border-cyan-400/20 bg-gradient-to-br from-cyan-950/40 to-[#131B2E] p-6 md:p-8">
+          <span className="text-xs text-cyan-300 tracking-widest">YOUR APPLICATION LIBRARY</span><h1 className="text-2xl md:text-3xl font-bold text-white mt-3">만든 앱부터 발견한 앱까지, 한곳에.</h1><p className="text-sm text-slate-400 mt-3 leading-6">앱을 등록하고 정보를 정리하세요. 하나씩 수정하거나 여러 앱을 선택해 함께 관리할 수 있습니다.</p>
+          <div className="flex flex-wrap gap-6 mt-6 text-sm">{[{ name: '등록된 앱', value: entries.length }, { name: '직접 만든 앱', value: entries.filter(e => e.origin === 'mine').length }, { name: '외부 앱', value: entries.filter(e => e.origin === 'external').length }].map(s => <div key={s.name}><strong className="text-xl text-white mr-2">{s.value}</strong><span className="text-slate-400">{s.name}</span></div>)}</div>
+        </section>
+        {message && <p role="status" className="text-sm text-cyan-200 rounded-xl border border-cyan-900 p-3">{message}</p>}
+        <div className="flex flex-wrap justify-between items-center gap-3"><h2 className="text-xl font-semibold text-white">{nav.find(n => n.id === section)?.name} <span className="text-sm text-cyan-300 ml-2">{visible.length}</span></h2><div className="flex flex-wrap gap-3"><label className="flex items-center gap-2 rounded-xl border border-slate-700 px-3"><Search size={16}/><input aria-label="앱 검색" placeholder="앱 이름, 설명, 제작자 검색" value={query} onChange={e => setQuery(e.target.value)} className="bg-transparent text-sm py-2.5 outline-none w-48"/></label><select aria-label="앱 분류" className={input + ' !w-auto'} value={category} onChange={e => setCategory(e.target.value)}>{['전체', ...categories].map(c => <option key={c}>{c}</option>)}</select></div></div>
+        <div className="flex flex-wrap items-center gap-4 text-sm"><label className="flex items-center gap-2"><input type="checkbox" checked={visible.length > 0 && visible.every(e => selected.includes(e.id))} onChange={e => setSelected(e.target.checked ? visible.map(e => e.id) : [])}/>현재 목록 전체 선택</label><button disabled={!selected.length} onClick={() => { setBulkCategory(''); setBulkOrigin(''); setBulkStatus(''); setBulk(true); }} className="flex items-center gap-2 border border-slate-700 rounded-xl px-3 py-2 disabled:opacity-40 hover:border-cyan-500"><CheckSquare size={16}/>선택한 앱 일괄 수정 ({selected.length})</button></div>
+        {visible.length ? <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">{visible.map(entry => <article key={entry.id} className="rounded-2xl border border-slate-800 bg-[#131B2E] p-5 flex flex-col gap-4"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><input aria-label={`${entry.name} 선택`} type="checkbox" checked={selected.includes(entry.id)} onChange={e => setSelected(prev => e.target.checked ? [...prev, entry.id] : prev.filter(id => id !== entry.id))}/><div className="p-3 rounded-xl bg-cyan-400/10 text-cyan-300"><AppWindow size={24}/></div></div><button aria-label={`${entry.name} 즐겨찾기`} aria-pressed={entry.favorite} onClick={() => setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, favorite: !e.favorite } : e))}><Star size={18} className={entry.favorite ? 'fill-amber-400 text-amber-400' : 'text-slate-500'}/></button></div><div><div className="flex gap-2 text-xs text-cyan-300 mb-2"><span>{entry.origin === 'mine' ? '직접 만든 앱' : '외부 앱'}</span><span className="text-slate-500">· {entry.category}</span></div><h3 className="text-lg font-semibold text-white break-words">{entry.name}</h3><p className="text-sm text-slate-400 mt-2 break-words">{entry.description || '설명이 등록되지 않았습니다.'}</p><p className="text-xs text-slate-500 mt-3">제작자: {entry.author || '미입력'}</p></div><div className="flex flex-wrap gap-2 mt-auto pt-3 border-t border-slate-700/50"><button onClick={() => { setEditor({ ...entry }); setMessage(''); }} className="flex items-center gap-2 text-sm rounded-lg bg-slate-800 px-3 py-2"><Pencil size={15}/>개별 수정</button>{safeUrl(entry.url) && <a href={entry.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-cyan-300 rounded-lg bg-cyan-400/10 px-3 py-2"><ExternalLink size={15}/>앱 열기</a>}{safeUrl(entry.repository) && <a href={entry.repository} target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 px-2 py-2">소스 저장소 ↗</a>}</div></article>)}</div> : <div className="border border-dashed border-slate-700 rounded-2xl text-center py-16"><Boxes className="mx-auto text-cyan-400 mb-4" size={36}/><h3 className="text-white font-semibold">표시할 앱이 없습니다</h3><p className="text-sm text-slate-400 mt-2">앱을 등록하거나 검색 및 분류 조건을 변경해주세요.</p><button onClick={() => { const entry = fresh(); if(section === 'external') entry.origin = 'external'; setEditor(entry); setMessage(''); }} className="text-cyan-300 text-sm mt-5">+ 새 앱 등록</button></div>}
+      </main>
     </div>
-  );
+    {(editor || bulk) && <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setEditor(null); setBulk(false); }}><section role="dialog" aria-modal="true" aria-labelledby="editor-title" className="bg-[#131B2E] border border-slate-700 rounded-2xl p-6 w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} onKeyDown={e => { if(e.key === 'Escape') { setEditor(null); setBulk(false); } }}><div className="flex justify-between items-center mb-5"><h2 id="editor-title" className="text-xl font-semibold">{bulk ? `${selected.length}개 앱 일괄 수정` : entries.some(e => e.id === editor?.id) ? '앱 개별 수정' : '새 앱 등록'}</h2><button aria-label="닫기" onClick={() => { setEditor(null); setBulk(false); }}><X size={20}/></button></div>
+      {message && <p role="alert" className="text-sm text-cyan-200 mb-4">{message}</p>}{bulk ? <form onSubmit={applyBulk} className="space-y-4"><p className="text-sm text-slate-400">선택한 앱의 등록 정보를 함께 변경합니다. 유지할 항목은 변경하지 않음을 선택하세요.</p><label className="block text-sm">분류<select className={input + ' mt-2'} value={bulkCategory} onChange={e => setBulkCategory(e.target.value)}><option value="">변경하지 않음</option>{categories.map(c => <option key={c}>{c}</option>)}</select></label><label className="block text-sm">앱 출처<select className={input + ' mt-2'} value={bulkOrigin} onChange={e => setBulkOrigin(e.target.value)}><option value="">변경하지 않음</option><option value="mine">직접 만든 앱</option><option value="external">외부 앱</option></select></label><label className="block text-sm">보관 상태<select className={input + ' mt-2'} value={bulkStatus} onChange={e => setBulkStatus(e.target.value)}><option value="">변경하지 않음</option><option value="active">사용 중</option><option value="archived">보관</option></select></label><button disabled={!bulkCategory && !bulkOrigin && !bulkStatus} className="bg-cyan-400 text-slate-950 font-semibold rounded-xl px-5 py-3 disabled:opacity-40">일괄 저장</button></form> : editor && <form onSubmit={save} className="space-y-4"><p className="text-xs text-slate-400">등록 정보 저장과 코덱 앱 수정을 이 화면에서 관리합니다. 아래에서 소스를 연결하고 수정 요청을 실행하세요.</p>{[{ key: 'name', label: '앱 이름', required: true }, { key: 'author', label: '제작자' }, { key: 'url', label: '앱 주소 (https://...)' }, { key: 'repository', label: '소스 저장소 주소 (선택)' }].map(field => <label key={field.key} className="block text-sm">{field.label}<input autoFocus={field.key === 'name'} required={field.required} className={input + ' mt-2'} value={editor[field.key as 'name']} onChange={e => setEditor({ ...editor, [field.key]: e.target.value })}/></label>)}<label className="block text-sm">설명<textarea className={input + ' mt-2'} value={editor.description} onChange={e => setEditor({ ...editor, description: e.target.value })}/></label><div className="grid grid-cols-2 gap-3"><label className="block text-sm">앱 출처<select className={input + ' mt-2'} value={editor.origin} onChange={e => setEditor({ ...editor, origin: e.target.value as Entry['origin'] })}><option value="mine">직접 만든 앱</option><option value="external">외부 앱</option></select></label><label className="block text-sm">분류<select className={input + ' mt-2'} value={editor.category} onChange={e => setEditor({ ...editor, category: e.target.value })}>{categories.map(c => <option key={c}>{c}</option>)}</select></label></div><label className="block text-sm">보관 상태<select className={input + ' mt-2'} value={editor.status} onChange={e => setEditor({ ...editor, status: e.target.value as Entry['status'] })}><option value="active">사용 중</option><option value="archived">보관</option></select></label><button className="bg-cyan-400 text-slate-950 font-semibold rounded-xl px-5 py-3">앱 정보 저장</button></form>}
+      {editor && entries.some(e => e.id === editor.id) && <CodexPanel key={editor.id} appId={editor.id} appName={editor.name} onApplied={onApplied}/>}
+    </section></div>}
+  </div>;
 }

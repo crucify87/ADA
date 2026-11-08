@@ -1,7 +1,5 @@
 {
-  "name": "CyberDeck Hub",
-  "description": "High-performance gaming and application command center for desktop and mobile with tactical telemetry, library management, and quick launch controls.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "ADA Hub",
+  "description": "직접 만든 앱과 외부 앱을 등록·보관하고 개별·일괄 수정하는 앱 관리 허브.",
+  "requestFramePermissions": []
 }
-

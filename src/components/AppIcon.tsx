@@ -16,8 +16,8 @@ function imageSources(url: string, imageUrl?: string, discovered: string[] = [])
 
 function IconImage({ sources, name }: { sources: string[]; name: string }) {
   const [index, setIndex] = useState(0);
-  return <div className="w-14 h-14 shrink-0 rounded-2xl bg-cyan-400/10 text-cyan-300 flex items-center justify-center overflow-hidden">
-    {sources[index] ? <img key={sources[index]} src={sources[index]} alt={`${name || '앱'} 아이콘`} width={40} height={40} className="w-10 h-10 object-contain" loading="lazy" referrerPolicy="no-referrer" onError={() => setIndex(current => current + 1)}/> : <AppWindow size={28} aria-label={`${name || '앱'} 기본 아이콘`}/>}
+  return <div className="relative w-40 max-w-full aspect-video shrink-0 rounded-xl bg-cyan-400/10 text-cyan-300 flex items-center justify-center overflow-hidden">
+    {sources[index] ? <img key={sources[index]} src={sources[index]} alt={`${name || '앱'} 대표 이미지`} width={160} height={90} className="absolute inset-0 w-full h-full object-contain" loading="lazy" referrerPolicy="no-referrer" onError={() => setIndex(current => current + 1)}/> : <AppWindow size={28} aria-label={`${name || '앱'} 기본 아이콘`}/>}
   </div>;
 }
 

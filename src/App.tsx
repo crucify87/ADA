@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Boxes, Code2, Globe, Star, Plus, Pencil, Search, X, ExternalLink, Archive, CheckSquare } from 'lucide-react';
+import { Boxes, Code2, Globe, Star, Plus, Pencil, Search, X, ExternalLink, Archive, CheckSquare, RefreshCw } from 'lucide-react';
 
 
 import AppIcon from './components/AppIcon';
@@ -24,6 +24,8 @@ export default function App() {
   const [bulkOrigin, setBulkOrigin] = useState('');
   const [bulkStatus, setBulkStatus] = useState('');
   const [message, setMessage] = useState('');
+  const [coverVersion, setCoverVersion] = useState(0);
+  const [coverStatus, setCoverStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch { setMessage('저장 공간이 부족하거나 브라우저 저장이 제한되어 변경 내용을 보관하지 못했습니다.'); } }, [entries]);
   const visible = entries.filter(e => (section === 'archived' ? e.status === 'archived' : e.status === 'active') && (section === 'mine' ? e.origin === 'mine' : section === 'external' ? e.origin === 'external' : section === 'favorites' ? e.favorite : true) && (category === '전체' || e.category === category) && `${e.name} ${e.description} ${e.author}`.toLowerCase().includes(query.toLowerCase())).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt));
   const nav = [{ id: 'all', name: '전체 앱', icon: Boxes }, { id: 'mine', name: '직접 만든 앱', icon: Code2 }, { id: 'external', name: '외부 앱', icon: Globe }, { id: 'favorites', name: '즐겨찾기', icon: Star }, { id: 'archived', name: '보관된 앱', icon: Archive }];
@@ -50,7 +52,45 @@ export default function App() {
     </header>
     <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row">
       <aside className="bg-deck-surface md:w-60 shrink-0 border-b md:border-b-0 md:border-r border-deck-border p-4 md:min-h-[calc(100vh-78px)]">
-        <div className="mb-5 overflow-hidden rounded-2xl border border-deck-border bg-deck-surface"><img src="/ada-icon.jpg" alt="ADA Hub 대표 이미지" width="1024" height="1024" className="block aspect-square w-full object-contain"/><div className="border-t border-deck-border px-4 py-3"><p className="font-bold tracking-[0.2em] text-deck-ink">ADA HUB</p><p className="mt-1 text-xs text-deck-muted">나의 앱 관리 공간</p></div></div><p className="text-xs tracking-widest text-deck-muted mb-4 px-3">APP WORKSPACE</p><nav className="flex md:flex-col gap-2 overflow-x-auto">{nav.map(item => <button key={item.id} onClick={() => { setSection(item.id); setSelected([]); }} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm whitespace-nowrap ${section === item.id ? 'bg-deck-mint text-deck-accent' : 'text-deck-muted hover:bg-deck-elevated'}`}><item.icon size={18}/>{item.name}</button>)}</nav>
+        <div className="mb-5 overflow-hidden rounded-2xl border border-deck-border bg-deck-surface">
+          <img
+            key={coverVersion}
+            src={coverVersion ? `/ada-icon.jpg?v=${coverVersion}` : '/ada-icon.jpg'}
+            alt="ADA Hub 대표 이미지"
+            width="1024"
+            height="1024"
+            className="block aspect-square w-full object-contain"
+            onLoad={() => { if (coverVersion) setCoverStatus('loaded'); }}
+            onError={() => setCoverStatus('error')}
+          />
+          <div className="border-t border-deck-border px-4 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="font-bold tracking-[0.2em] text-deck-ink">ADA HUB</p>
+                <p className="mt-1 text-xs text-deck-muted">나의 앱 관리 공간</p>
+              </div>
+              <button
+                type="button"
+                aria-label="대표 이미지 새로고침"
+                title="대표 이미지 새로고침"
+                disabled={coverStatus === 'loading'}
+                onClick={() => {
+                  setCoverStatus('loading');
+                  setCoverVersion(previous => Math.max(Date.now(), previous + 1));
+                }}
+                className="grid size-9 shrink-0 place-items-center rounded-lg text-deck-muted hover:bg-deck-elevated hover:text-deck-ink focus-visible:outline-2 focus-visible:outline-deck-accent disabled:opacity-50"
+              >
+                <RefreshCw size={16} aria-hidden="true" className={coverStatus === 'loading' ? 'motion-safe:animate-spin' : undefined}/>
+              </button>
+            </div>
+            <p role="status" className={coverStatus === 'error' ? 'mt-2 text-xs text-deck-muted' : 'sr-only'}>
+              {coverStatus === 'loading' && '대표 이미지를 불러오는 중입니다.'}
+              {coverStatus === 'loaded' && '대표 이미지를 새로 불러왔습니다.'}
+              {coverStatus === 'error' && '대표 이미지를 불러오지 못했습니다.'}
+            </p>
+          </div>
+        </div>
+        <p className="text-xs tracking-widest text-deck-muted mb-4 px-3">APP WORKSPACE</p><nav className="flex md:flex-col gap-2 overflow-x-auto">{nav.map(item => <button key={item.id} onClick={() => { setSection(item.id); setSelected([]); }} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm whitespace-nowrap ${section === item.id ? 'bg-deck-mint text-deck-accent' : 'text-deck-muted hover:bg-deck-elevated'}`}><item.icon size={18}/>{item.name}</button>)}</nav>
         <p className="hidden md:block text-xs text-deck-muted leading-6 p-3 mt-8">직접 만든 앱과 다른 제작자의 앱을 한곳에 보관하세요.<br/>등록 정보는 이 브라우저에 저장됩니다.</p>
       </aside>
       <main className="flex-1 min-w-0 p-5 md:p-9 space-y-7">

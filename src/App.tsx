@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Boxes, Code2, Globe, Star, Plus, Pencil, Search, X, ExternalLink, Archive, CheckSquare, RefreshCw } from 'lucide-react';
+import { Boxes, Code2, Globe, Star, Plus, Pencil, Search, X, ExternalLink, Archive, CheckSquare } from 'lucide-react';
 
 
 import AppIcon from './components/AppIcon';
@@ -53,36 +53,32 @@ export default function App() {
     <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row">
       <aside className="bg-deck-surface md:w-60 shrink-0 border-b md:border-b-0 md:border-r border-deck-border p-4 md:min-h-[calc(100vh-78px)]">
         <div className="mb-5 overflow-hidden rounded-2xl border border-deck-border bg-deck-surface">
-          <img
-            key={coverVersion}
-            src={coverVersion ? `/ada-icon.jpg?v=${coverVersion}` : '/ada-icon.jpg'}
-            alt="ADA Hub 대표 이미지"
-            width="1024"
-            height="1024"
-            className="block aspect-square w-full object-contain"
-            onLoad={() => { if (coverVersion) setCoverStatus('loaded'); }}
-            onError={() => setCoverStatus('error')}
-          />
+          <button
+            type="button"
+            aria-label="ADA Hub 대표 이미지 새로고침"
+            title="대표 이미지 새로고침"
+            aria-disabled={coverStatus === 'loading'}
+            onClick={() => {
+              if (coverStatus === 'loading') return;
+              setCoverStatus('loading');
+              setCoverVersion(previous => Math.max(Date.now(), previous + 1));
+            }}
+            className="block w-full cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-deck-accent aria-disabled:cursor-wait"
+          >
+            <img
+              key={coverVersion}
+              src={coverVersion ? `/ada-icon.jpg?v=${coverVersion}` : '/ada-icon.jpg'}
+              alt=""
+              width="1024"
+              height="1024"
+              className="block aspect-square w-full object-contain"
+              onLoad={() => { if (coverVersion) setCoverStatus('loaded'); }}
+              onError={() => setCoverStatus('error')}
+            />
+          </button>
           <div className="border-t border-deck-border px-4 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="font-bold tracking-[0.2em] text-deck-ink">ADA HUB</p>
-                <p className="mt-1 text-xs text-deck-muted">나의 앱 관리 공간</p>
-              </div>
-              <button
-                type="button"
-                aria-label="대표 이미지 새로고침"
-                title="대표 이미지 새로고침"
-                disabled={coverStatus === 'loading'}
-                onClick={() => {
-                  setCoverStatus('loading');
-                  setCoverVersion(previous => Math.max(Date.now(), previous + 1));
-                }}
-                className="grid size-9 shrink-0 place-items-center rounded-lg text-deck-muted hover:bg-deck-elevated hover:text-deck-ink focus-visible:outline-2 focus-visible:outline-deck-accent disabled:opacity-50"
-              >
-                <RefreshCw size={16} aria-hidden="true" className={coverStatus === 'loading' ? 'motion-safe:animate-spin' : undefined}/>
-              </button>
-            </div>
+            <p className="font-bold tracking-[0.2em] text-deck-ink">ADA HUB</p>
+            <p className="mt-1 text-xs text-deck-muted">나의 앱 관리 공간</p>
             <p role="status" className={coverStatus === 'error' ? 'mt-2 text-xs text-deck-muted' : 'sr-only'}>
               {coverStatus === 'loading' && '대표 이미지를 불러오는 중입니다.'}
               {coverStatus === 'loaded' && '대표 이미지를 새로 불러왔습니다.'}

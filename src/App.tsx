@@ -1,19 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Boxes, Code2, Globe, Star, Plus, Pencil, Search, X, ExternalLink, Archive, CheckSquare } from 'lucide-react';
 
 
 import AppIcon from './components/AppIcon';
 import { normalizeWebUrl } from './webUrl';
 
-type Entry = { id: string; name: string; description: string; url: string; imageUrl?: string; repository: string; author: string; origin: 'mine' | 'external'; category: string; status: 'active' | 'archived'; favorite: boolean; updatedAt: string };
+export type Entry = { id: string; name: string; description: string; url: string; imageUrl?: string; repository: string; author: string; origin: 'mine' | 'external'; category: string; status: 'active' | 'archived'; favorite: boolean; updatedAt: string };
 const KEY = 'ada-app-library-v1';
 const fresh = (): Entry => ({ id: crypto.randomUUID(), name: '', description: '', url: '', imageUrl: '', repository: '', author: '', origin: 'mine', category: '도구', status: 'active', favorite: false, updatedAt: new Date().toISOString() });
 const categories = ['도구', '생산성', '콘텐츠', '개발', '기타'];
 const input = 'w-full rounded-xl border border-deck-border bg-deck-surface px-3 py-2.5 text-sm focus:outline-none focus:border-deck-accent';
 function safeUrl(value: string) { try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol); } catch { return false; } }
-function readEntries(): Entry[] { try { const value = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(value) ? value.filter(e => e && typeof e.id === 'string' && typeof e.name === 'string' && typeof e.description === 'string' && ['mine', 'external'].includes(e.origin) && ['active', 'archived'].includes(e.status)) : []; } catch { return []; } }
-export default function App() {
-  const [entries, setEntries] = useState<Entry[]>(readEntries);
+export function readEntries(): Entry[] { try { const value = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(value) ? value.filter(e => e && typeof e.id === 'string' && typeof e.name === 'string' && typeof e.description === 'string' && ['mine', 'external'].includes(e.origin) && ['active', 'archived'].includes(e.status)) : []; } catch { return []; } }
+type Props = { entries: Entry[]; setEntries: (update: (entries: Entry[]) => Entry[]) => Promise<void>; accountMenu: React.ReactNode };
+export default function App({ entries, setEntries, accountMenu }: Props) {
   const [section, setSection] = useState('all');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('전체');
@@ -26,10 +26,18 @@ export default function App() {
   const [message, setMessage] = useState('');
   const [coverVersion, setCoverVersion] = useState(0);
   const [coverStatus, setCoverStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
-  useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch { setMessage('저장 공간이 부족하거나 브라우저 저장이 제한되어 변경 내용을 보관하지 못했습니다.'); } }, [entries]);
   const visible = entries.filter(e => (section === 'archived' ? e.status === 'archived' : e.status === 'active') && (section === 'mine' ? e.origin === 'mine' : section === 'external' ? e.origin === 'external' : section === 'favorites' ? e.favorite : true) && (category === '전체' || e.category === category) && `${e.name} ${e.description} ${e.author}`.toLowerCase().includes(query.toLowerCase())).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt));
   const nav = [{ id: 'all', name: '전체 앱', icon: Boxes }, { id: 'mine', name: '직접 만든 앱', icon: Code2 }, { id: 'external', name: '외부 앱', icon: Globe }, { id: 'favorites', name: '즐겨찾기', icon: Star }, { id: 'archived', name: '보관된 앱', icon: Archive }];
-  function save(event: React.FormEvent) {
+  async function changeEntries(update: (entries: Entry[]) => Entry[]) {
+    try {
+      await setEntries(update);
+      return true;
+    } catch {
+      setMessage('앱 정보를 저장하지 못했습니다. 연결과 승인 상태를 확인한 뒤 다시 시도해주세요.');
+      return false;
+    }
+  }
+  async function save(event: React.FormEvent) {
     event.preventDefault(); if (!editor) return;
     if (!editor.name.trim()) { setMessage('앱 이름을 입력해주세요.'); return; }
     const url = normalizeWebUrl(editor.url);
@@ -37,18 +45,18 @@ export default function App() {
     const imageUrl = normalizeWebUrl(editor.imageUrl || '');
     if (url === null || repository === null || imageUrl === null) { setMessage('올바른 웹 주소를 입력해주세요. 예: example.com 또는 https://example.com (http도 지원)'); return; }
     const entry = { ...editor, url, repository, imageUrl, name: editor.name.trim(), updatedAt: new Date().toISOString() };
-    setEntries(prev => prev.some(e => e.id === entry.id) ? prev.map(e => e.id === entry.id ? entry : e) : [...prev, entry]);
+    if (!(await changeEntries(prev => prev.some(e => e.id === entry.id) ? prev.map(e => e.id === entry.id ? entry : e) : [...prev, entry]))) return;
     setEditor(null); setMessage('앱 정보를 저장했습니다.');
   }
-  function applyBulk(event: React.FormEvent) {
+  async function applyBulk(event: React.FormEvent) {
     event.preventDefault();
-    setEntries(prev => prev.map(e => selected.includes(e.id) ? { ...e, ...(bulkCategory ? { category: bulkCategory } : {}), ...(bulkOrigin ? { origin: bulkOrigin as Entry['origin'] } : {}), ...(bulkStatus ? { status: bulkStatus as Entry['status'] } : {}), updatedAt: new Date().toISOString() } : e));
+    if (!(await changeEntries(prev => prev.map(e => selected.includes(e.id) ? { ...e, ...(bulkCategory ? { category: bulkCategory } : {}), ...(bulkOrigin ? { origin: bulkOrigin as Entry['origin'] } : {}), ...(bulkStatus ? { status: bulkStatus as Entry['status'] } : {}), updatedAt: new Date().toISOString() } : e)))) return;
     setBulk(false); setSelected([]); setMessage('선택한 앱 정보를 일괄 수정했습니다.');
   }
   return <div className="min-h-screen bg-deck-base text-deck-ink">
     <header className="bg-deck-surface border-b border-deck-border flex items-center justify-between px-5 md:px-9 py-4 gap-4">
       <a href="#" className="flex items-center gap-3"><img src="/ada-icon.jpg" alt="ADA" className="w-11 h-11 rounded-xl"/><div><strong className="block text-deck-ink tracking-widest">ADA HUB</strong><span className="text-xs text-deck-muted">앱 등록 · 보관 · 관리</span></div></a>
-      <button onClick={() => { setEditor(fresh()); setMessage(''); }} className="flex items-center gap-2 rounded-xl bg-deck-accent text-white px-4 py-2.5 font-semibold text-sm"><Plus size={18}/>앱 등록</button>
+      <div className="flex flex-wrap items-center justify-end gap-2">{accountMenu}<button onClick={() => { setEditor(fresh()); setMessage(''); }} className="flex items-center gap-2 rounded-xl bg-deck-accent text-white px-4 py-2.5 font-semibold text-sm"><Plus size={18}/>앱 등록</button></div>
     </header>
     <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row">
       <aside className="bg-deck-surface md:w-60 shrink-0 border-b md:border-b-0 md:border-r border-deck-border p-4 md:min-h-[calc(100vh-78px)]">
@@ -87,7 +95,7 @@ export default function App() {
           </div>
         </div>
         <p className="text-xs tracking-widest text-deck-muted mb-4 px-3">APP WORKSPACE</p><nav className="flex md:flex-col gap-2 overflow-x-auto">{nav.map(item => <button key={item.id} onClick={() => { setSection(item.id); setSelected([]); }} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm whitespace-nowrap ${section === item.id ? 'bg-deck-mint text-deck-accent' : 'text-deck-muted hover:bg-deck-elevated'}`}><item.icon size={18}/>{item.name}</button>)}</nav>
-        <p className="hidden md:block text-xs text-deck-muted leading-6 p-3 mt-8">직접 만든 앱과 다른 제작자의 앱을 한곳에 보관하세요.<br/>등록 정보는 이 브라우저에 저장됩니다.</p>
+        <p className="hidden md:block text-xs text-deck-muted leading-6 p-3 mt-8">직접 만든 앱과 다른 제작자의 앱을 한곳에 보관하세요.<br/>등록 정보는 내 계정에 저장됩니다.</p>
       </aside>
       <main className="flex-1 min-w-0 p-5 md:p-9 space-y-7">
         <section className="rounded-3xl border border-deck-border bg-gradient-to-br from-deck-mint to-[#F1F7EE] p-6 md:p-8">
@@ -97,7 +105,7 @@ export default function App() {
         {message && <p role="status" className="text-sm text-deck-accent rounded-xl border border-deck-border p-3">{message}</p>}
         <div className="flex flex-wrap justify-between items-center gap-3"><h2 className="text-xl font-semibold text-deck-ink">{nav.find(n => n.id === section)?.name} <span className="text-sm text-deck-accent ml-2">{visible.length}</span></h2><div className="flex flex-wrap gap-3"><label className="flex items-center gap-2 rounded-xl border border-deck-border px-3"><Search size={16}/><input aria-label="앱 검색" placeholder="앱 이름, 설명, 제작자 검색" value={query} onChange={e => setQuery(e.target.value)} className="bg-transparent text-sm py-2.5 outline-none w-48"/></label><select aria-label="앱 분류" className={input + ' !w-auto'} value={category} onChange={e => setCategory(e.target.value)}>{['전체', ...categories].map(c => <option key={c}>{c}</option>)}</select></div></div>
         <div className="flex flex-wrap items-center gap-4 text-sm"><label className="flex items-center gap-2"><input type="checkbox" checked={visible.length > 0 && visible.every(e => selected.includes(e.id))} onChange={e => setSelected(e.target.checked ? visible.map(e => e.id) : [])}/>현재 목록 전체 선택</label><button disabled={!selected.length} onClick={() => { setBulkCategory(''); setBulkOrigin(''); setBulkStatus(''); setBulk(true); }} className="flex items-center gap-2 border border-deck-border rounded-xl px-3 py-2 disabled:opacity-40 hover:border-deck-accent"><CheckSquare size={16}/>선택한 앱 일괄 수정 ({selected.length})</button></div>
-        {visible.length ? <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">{visible.map(entry => <article key={entry.id} className="rounded-2xl border border-deck-border bg-deck-surface p-5 flex flex-col gap-4"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><input aria-label={`${entry.name} 선택`} type="checkbox" checked={selected.includes(entry.id)} onChange={e => setSelected(prev => e.target.checked ? [...prev, entry.id] : prev.filter(id => id !== entry.id))}/><AppIcon url={entry.url} imageUrl={entry.imageUrl} name={entry.name}/></div><button aria-label={`${entry.name} 즐겨찾기`} aria-pressed={entry.favorite} onClick={() => setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, favorite: !e.favorite } : e))}><Star size={18} className={entry.favorite ? 'fill-amber-400 text-amber-700' : 'text-deck-muted'}/></button></div><div><div className="flex gap-2 text-xs text-deck-accent mb-2"><span>{entry.origin === 'mine' ? '직접 만든 앱' : '외부 앱'}</span><span className="text-deck-muted">· {entry.category}</span></div><h3 className="text-lg font-semibold text-deck-ink break-words">{entry.name}</h3><p className="text-sm text-deck-muted mt-2 break-words">{entry.description || '설명이 등록되지 않았습니다.'}</p><p className="text-xs text-deck-muted mt-3">제작자: {entry.author || '미입력'}</p></div><div className="flex flex-wrap gap-2 mt-auto pt-3 border-t border-deck-border/50"><button onClick={() => { setEditor({ ...entry }); setMessage(''); }} className="flex items-center gap-2 text-sm rounded-lg bg-deck-elevated px-3 py-2"><Pencil size={15}/>개별 수정</button>{safeUrl(entry.url) && <a href={entry.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-deck-accent rounded-lg bg-deck-mint px-3 py-2"><ExternalLink size={15}/>앱 열기</a>}{safeUrl(entry.repository) && <a href={entry.repository} target="_blank" rel="noopener noreferrer" className="text-xs text-deck-muted px-2 py-2">소스 저장소 ↗</a>}</div></article>)}</div> : <div className="border border-dashed border-deck-border rounded-2xl text-center py-16"><Boxes className="mx-auto text-deck-accent mb-4" size={36}/><h3 className="text-deck-ink font-semibold">표시할 앱이 없습니다</h3><p className="text-sm text-deck-muted mt-2">앱을 등록하거나 검색 및 분류 조건을 변경해주세요.</p><button onClick={() => { const entry = fresh(); if(section === 'external') entry.origin = 'external'; setEditor(entry); setMessage(''); }} className="text-deck-accent text-sm mt-5">+ 새 앱 등록</button></div>}
+        {visible.length ? <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">{visible.map(entry => <article key={entry.id} className="rounded-2xl border border-deck-border bg-deck-surface p-5 flex flex-col gap-4"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><input aria-label={`${entry.name} 선택`} type="checkbox" checked={selected.includes(entry.id)} onChange={e => setSelected(prev => e.target.checked ? [...prev, entry.id] : prev.filter(id => id !== entry.id))}/><AppIcon url={entry.url} imageUrl={entry.imageUrl} name={entry.name}/></div><button aria-label={`${entry.name} 즐겨찾기`} aria-pressed={entry.favorite} onClick={() => void changeEntries(prev => prev.map(e => e.id === entry.id ? { ...e, favorite: !e.favorite } : e))}><Star size={18} className={entry.favorite ? 'fill-amber-400 text-amber-700' : 'text-deck-muted'}/></button></div><div><div className="flex gap-2 text-xs text-deck-accent mb-2"><span>{entry.origin === 'mine' ? '직접 만든 앱' : '외부 앱'}</span><span className="text-deck-muted">· {entry.category}</span></div><h3 className="text-lg font-semibold text-deck-ink break-words">{entry.name}</h3><p className="text-sm text-deck-muted mt-2 break-words">{entry.description || '설명이 등록되지 않았습니다.'}</p><p className="text-xs text-deck-muted mt-3">제작자: {entry.author || '미입력'}</p></div><div className="flex flex-wrap gap-2 mt-auto pt-3 border-t border-deck-border/50"><button onClick={() => { setEditor({ ...entry }); setMessage(''); }} className="flex items-center gap-2 text-sm rounded-lg bg-deck-elevated px-3 py-2"><Pencil size={15}/>개별 수정</button>{safeUrl(entry.url) && <a href={entry.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-deck-accent rounded-lg bg-deck-mint px-3 py-2"><ExternalLink size={15}/>앱 열기</a>}{safeUrl(entry.repository) && <a href={entry.repository} target="_blank" rel="noopener noreferrer" className="text-xs text-deck-muted px-2 py-2">소스 저장소 ↗</a>}</div></article>)}</div> : <div className="border border-dashed border-deck-border rounded-2xl text-center py-16"><Boxes className="mx-auto text-deck-accent mb-4" size={36}/><h3 className="text-deck-ink font-semibold">표시할 앱이 없습니다</h3><p className="text-sm text-deck-muted mt-2">앱을 등록하거나 검색 및 분류 조건을 변경해주세요.</p><button onClick={() => { const entry = fresh(); if(section === 'external') entry.origin = 'external'; setEditor(entry); setMessage(''); }} className="text-deck-accent text-sm mt-5">+ 새 앱 등록</button></div>}
       </main>
     </div>
     {(editor || bulk) && <div className="fixed inset-0 bg-[#283D35]/30 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setEditor(null); setBulk(false); }}><section role="dialog" aria-modal="true" aria-labelledby="editor-title" className="bg-deck-surface border border-deck-border rounded-2xl p-6 w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} onKeyDown={e => { if(e.key === 'Escape') { setEditor(null); setBulk(false); } }}><div className="flex justify-between items-center mb-5"><h2 id="editor-title" className="text-xl font-semibold">{bulk ? `${selected.length}개 앱 일괄 수정` : entries.some(e => e.id === editor?.id) ? '앱 개별 수정' : '새 앱 등록'}</h2><button aria-label="닫기" onClick={() => { setEditor(null); setBulk(false); }}><X size={20}/></button></div>
